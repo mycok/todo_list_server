@@ -61,12 +61,8 @@ func TestGet(t *testing.T) {
 		},
 	}
 
-	// Setup a test server that creates and returns a temporary file name.
-	tServer, tempFileName := setupAPI(t)
-	defer t.Cleanup(func() {
-		tServer.Close()
-		os.Remove(tempFileName)
-	})
+	// Setup a test server.
+	tServer := setupAPI(t)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -80,7 +76,7 @@ func TestGet(t *testing.T) {
 				}
 			)
 
-			// Perform a GET request with the provided url path.
+			// Perform a GET request using the default client and the test server url path.
 			res, err := http.Get(tServer.URL + tc.urlPath)
 			if err != nil {
 				t.Fatalf("Error sending a GET request: %q", err)
@@ -122,13 +118,9 @@ func TestGet(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	// Setup a test server that creates and returns a temporary file name.
-	tServer, tempFileName := setupAPI(t)
-	defer t.Cleanup(func() {
-		tServer.Close()
-		os.Remove(tempFileName)
-	})
-
+	// Setup a test server.
+	tServer := setupAPI(t)
+	
 	taskName := "test add todo task"
 
 	t.Run("AddNew", func(t *testing.T) {
@@ -144,6 +136,7 @@ func TestAdd(t *testing.T) {
 			t.Fatalf("Error encoding JSON body: %q", err)
 		}
 
+		// Perform a POST request using the default client and the test server url path.
 		resp, err := http.Post(tServer.URL+"/todo", "application/json", &body)
 		if err != nil {
 			t.Fatalf("Error sending a POST request: %q", err)
@@ -169,6 +162,7 @@ func TestAdd(t *testing.T) {
 
 		// Check for the newly added todo task.
 		t.Run("CheckNew", func(t *testing.T) {
+			// Perform a GET request using the default client and the test server url path.
 			resp, err := http.Get(tServer.URL + "/todo/4")
 			if err != nil {
 				t.Fatalf("Error sending a POST request: %q", err)
@@ -199,21 +193,19 @@ func TestAdd(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	// Setup a test server that creates and returns a temporary file name.
-	tServer, tempFileName := setupAPI(t)
-	defer t.Cleanup(func() {
-		tServer.Close()
-		os.Remove(tempFileName)
-	})
+	// Setup a test server.
+	tServer := setupAPI(t)
 
 	t.Run("Delete", func(t *testing.T) {
 		url := fmt.Sprintf("%s/todo/1", tServer.URL)
 
+		// Create a new custom DELETE request.
 		req, err := http.NewRequest(http.MethodDelete, url, nil)
 		if err != nil {
 			t.Fatalf("Error creating a DELETE request: %q", err)
 		}
 
+		// Send a DELETE request to the test server.
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatalf("Error sending a DELETE request: %q", err)
@@ -242,6 +234,7 @@ func TestDelete(t *testing.T) {
 
 		// Check for successful deletion.
 		t.Run("CheckDelete", func(t *testing.T) {
+			// Perform a GET request using the default client and the test server url path.
 			resp, err := http.Get(tServer.URL + "/todo")
 			if err != nil {
 				t.Fatalf("Error sending a GET request: %q", err)
@@ -274,21 +267,19 @@ func TestDelete(t *testing.T) {
 }
 
 func TestPatch(t *testing.T) {
-	// Setup a test server that creates and returns a temporary file name.
-	tServer, tempFileName := setupAPI(t)
-	defer t.Cleanup(func() {
-		tServer.Close()
-		os.Remove(tempFileName)
-	})
-
+	// Setup a test server.
+	tServer := setupAPI(t)
+	
 	t.Run("Complete", func(t *testing.T) {
 		url := fmt.Sprintf("%s/todo/1?complete", tServer.URL)
 
+		// Create a new custom PATCH request.
 		req, err := http.NewRequest(http.MethodPatch, url, nil)
 		if err != nil {
 			t.Fatalf("Error creating a PATCH request: %q", err)
 		}
 
+		// Send a PATCH request to the test server.
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatalf("Error sending a PATCH request: %q", err)
@@ -333,7 +324,7 @@ func TestPatch(t *testing.T) {
 
 }
 
-func setupAPI(t *testing.T) (*httptest.Server, string) {
+func setupAPI(t *testing.T) *httptest.Server {
 	t.Helper()
 
 	tempTodoFile, err := os.CreateTemp("", "todo")
@@ -367,5 +358,10 @@ func setupAPI(t *testing.T) (*httptest.Server, string) {
 		}
 	}
 
-	return ts, tempTodoFile.Name()
+	t.Cleanup(func() {
+		os.Remove(tempTodoFile.Name())
+		ts.Close()
+	})
+
+	return ts
 }

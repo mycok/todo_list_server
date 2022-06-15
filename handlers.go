@@ -123,6 +123,7 @@ func patchHandler(w http.ResponseWriter, r *http.Request, l *todo.List, id int, 
 
 	if _, ok := q["complete"]; !ok {
 		msg := "Missing query param 'complete'"
+
 		replyWithErr(w, r, http.StatusBadRequest, msg)
 
 		return
@@ -159,6 +160,7 @@ func addHandler(w http.ResponseWriter, r *http.Request, l *todo.List, todoFile s
 
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
 		msg := fmt.Sprintf("Invalid JSON: %s", err)
+		
 		replyWithErr(w, r, http.StatusBadRequest, msg)
 
 		return
